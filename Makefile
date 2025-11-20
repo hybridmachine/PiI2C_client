@@ -2,8 +2,8 @@
 # Makefile:
 #	Copyright (c) 2025 Brian Tabone
 #################################################################################
-#	Simple I2C client (using GPIO for input lines, not using I2C driver
-#	This project implements a simple statemachine that allows users
+#	Simple I2C client ,using GPIO for input lines, not using I2C kernel driver!
+#	This project implements a simple state machine that allows users
 #	to set GPIO pins for SCL/SDA input then act as an I2C client with configurable address
 #
 #    PiI2C_Client is free software: you can redistribute it and/or modify
