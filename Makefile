@@ -1,14 +1,12 @@
 #
 # Makefile:
-#	wiringPi - A "wiring" library for the Raspberry Pi
-#	https://github.com/wiringPi/wiringPi
-#
-#	Copyright (c) 2012-2015 Gordon Henderson
+#	Copyright (c) 2025 Brian Tabone
 #################################################################################
-# This file is part of wiringPi:
-#	Wiring Compatable library for the Raspberry Pi
+#	Simple I2C client (using GPIO for input lines, not using I2C driver
+#	This project implements a simple statemachine that allows users
+#	to set GPIO pins for SCL/SDA input then act as an I2C client with configurable address
 #
-#    wiringPi is free software: you can redistribute it and/or modify
+#    PiI2C_Client is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU Lesser General Public License as published by
 #    the Free Software Foundation, either version 3 of the License, or
 #    (at your option) any later version.
@@ -19,7 +17,7 @@
 #    GNU Lesser General Public License for more details.
 #
 #    You should have received a copy of the GNU Lesser General Public License
-#    along with wiringPi.  If not, see <http://www.gnu.org/licenses/>.
+#    along with PiI2C_Client.  If not, see <http://www.gnu.org/licenses/>.
 #################################################################################
 
 ifneq ($V,1)
@@ -34,9 +32,6 @@ CFLAGS	= $(DEBUG) -Wall $(INCLUDE) -Winline -pipe $(EXTRA_CFLAGS)
 
 LDFLAGS	= -L/usr/local/lib
 LDLIBS    = -lwiringPi -lwiringPiDev -lpthread -lm -lcrypt -lrt
-
-# Should not alter anything below this line
-###############################################################################
 
 SRC	=	isr.c \
 		i2c_client.c
@@ -66,5 +61,3 @@ isr-osc:	isr-osc.o
 clean:
 	$Q echo "[Clean]"
 	$Q rm -f build/$(OBJ) *~ core tags $(BINS)
-
-# DO NOT DELETE
