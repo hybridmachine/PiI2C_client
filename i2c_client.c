@@ -49,6 +49,20 @@ void setupInterruptHandlers(void) {
 	wiringPiISR (1, INT_EDGE_BOTH, &interruptHandlerSDA) ;
 }
 
+int risingEdge(int current, int incoming) {
+    if (current == LOW && incoming == HIGH)
+        return 1;
+
+    return 0;
+}
+
+int fallingEdge(int current, int incoming) {
+    if (current == HIGH && incoming == LOW)
+        return 1;
+
+    return 0;
+}
+
 int main(int argc, char *argv[]) {
 	if (argc < 2) {
 		printf("Usage: %s <address in hex>\n", argv[0]);
@@ -57,12 +71,16 @@ int main(int argc, char *argv[]) {
 
     int currentSCL = SCL;
     int currentSDA = SDA;
-	
+
+    printf ("Setting up wiringPi\n");	
 	wiringPiSetup () ;
+
+    printf ("Setting up interrupt handlers\n");
     setupInterruptHandlers ();
 
     enum FSM_I2C fsmCurrentState = IDLE;
 
+    printf ("Interrupt handlers setup, starting I2C client state machine\n");
     // Loop, processing the I2C state machine
     for (;;) 
     {
@@ -74,12 +92,39 @@ int main(int argc, char *argv[]) {
         switch(fsmCurrentState) {
 
             case IDLE:
+                if (SCL == HIGH && fallingEdge(currentSDA, SDA))
+                {
+                    fsmCurrentState = STARTING;
+                }
                 break;
              
             case STARTING:
+                if (SCL == LOW && SDA == LOW)
+                {
+                    fsmCurrentState = ADDRESSING;
+                    BIT_INDEX = 7; 
+                    REG_DATA = 0;
+                }
                 break;
 
             case ADDRESSING:
+                if (risingEdge(currentSCL, SCL))
+                {
+                    // Shift in the current bit, remember I2C goes from MSB downto LSB 
+                    // Bitwise and SDA with 0x01, it should always just be 1 or 0, but just in case      
+                    REG_DATA = (REG_DATA << 1) | (SDA & 0x01);
+                    BIT_INDEX--;
+
+                    if (BIT_INDEX <= 0)
+                    {
+                        REG_ADDRESS = REG_DATA;
+                        REG_DATA = 0;
+                        BIT_INDEX = 7;
+                        // fsmCurrentState = RECEIVING;
+                        // For debug, print address then wait for next start
+                        printf("Address: 0x%x\n", REG_ADDRESS);
+                    }
+                }
                 break;
 
             case RECEIVING:
@@ -91,6 +136,9 @@ int main(int argc, char *argv[]) {
             default:
                 continue;
         }
+
+        currentSCL = SCL;
+        currentSDA = SDA;
     }
 
 	uint32_t address = hexStringToUint(argv[1]);
