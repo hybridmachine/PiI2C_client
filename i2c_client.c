@@ -3,6 +3,8 @@
 #include <errno.h>
 #include <stdint.h>
 #include <wiringPi.h>
+#include <unistd.h>
+
 
 // Assume pins in pulled up state on startup.
 static int SCL = 1; 
@@ -14,8 +16,8 @@ static int REG_ADDRESS = 0;
 // The bit index (remember high order bits are shifted in first)
 static int BIT_INDEX = 7; // Bits 7 downto 0 for 8 bit registers
 
-const int sclPin = 0;
-const int sdaPin = 1;
+const int sclPin = 1;
+const int sdaPin = 0;
 const int ACK_VAL = 0;
 
 enum FSM_I2C {
@@ -28,10 +30,12 @@ enum FSM_I2C {
 
 void interruptHandler_SCL (void) { 
     SCL = digitalRead(sclPin);
+    //printf("SCL %d\n", SCL);
 }
 
 void interruptHandlerSDA (void) {
     SDA = digitalRead(sdaPin);
+    //printf("SDA %d\n", SDA);
 }
 
 uint32_t hexStringToUint(const char* hexString) {
@@ -73,7 +77,12 @@ int main(int argc, char *argv[]) {
     int currentSDA = SDA;
 
     printf ("Setting up wiringPi\n");	
-	wiringPiSetup () ;
+    wiringPiSetup () ;
+
+    pinMode(sclPin, INPUT);
+    pinMode(sdaPin, INPUT);
+    pullUpDnControl(sclPin, PUD_UP);
+    pullUpDnControl(sdaPin, PUD_UP);
 
     printf ("Setting up interrupt handlers\n");
     setupInterruptHandlers ();
@@ -94,6 +103,9 @@ int main(int argc, char *argv[]) {
             case IDLE:
                 if (SCL == HIGH && fallingEdge(currentSDA, SDA))
                 {
+                    REG_DATA = 0;
+                    REG_ADDRESS = 0;
+                    printf ("Starting \n");
                     fsmCurrentState = STARTING;
                 }
                 break;
@@ -101,6 +113,7 @@ int main(int argc, char *argv[]) {
             case STARTING:
                 if (SCL == LOW && SDA == LOW)
                 {
+		    printf ("Addressing \n");
                     fsmCurrentState = ADDRESSING;
                     BIT_INDEX = 7; 
                     REG_DATA = 0;
@@ -120,9 +133,9 @@ int main(int argc, char *argv[]) {
                         REG_ADDRESS = REG_DATA;
                         REG_DATA = 0;
                         BIT_INDEX = 7;
-                        // fsmCurrentState = RECEIVING;
+                        fsmCurrentState = IDLE;
                         // For debug, print address then wait for next start
-                        printf("Address: 0x%x\n", REG_ADDRESS);
+                        printf("Address: 0x%02x\n", REG_ADDRESS);
                     }
                 }
                 break;
@@ -139,6 +152,8 @@ int main(int argc, char *argv[]) {
 
         currentSCL = SCL;
         currentSDA = SDA;
+
+        usleep(10);
     }
 
 	uint32_t address = hexStringToUint(argv[1]);
